@@ -4,62 +4,44 @@ namespace App\Http\Controllers;
 
 use Aws\Rekognition\RekognitionClient;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Storage;
 
 class PhotosController extends Controller
 {
     public function index()
     {
-        return view('index');
+        $client = App::make('aws')->createClient('rekognition');
+        $result = $client->listCollections([
+            // 'MaxResults' => <integer>,
+            // 'NextToken' => '<string>',
+        ]);
+        $collections = $result->get('CollectionIds');
+        return view('index', \compact('collections'));
     }
 
     public function analyze(Request $request)
     {
-        $client = new RekognitionClient([
-            'region'    => 'us-west-2',
-            'version'   => 'latest'
+        $client = App::make('aws')->createClient('rekognition');
+        $threshold = \intval($request->input('threshold'));
+        $collection = $request->input('collection');
+        $image = $request->file('photo');
+
+        $path = Storage::disk('s3')->putFile('search', $image, ['public']);
+
+        $result = $client->searchFacesByImage([
+            'CollectionId' => $collection, // REQUIRED
+            'FaceMatchThreshold' => $threshold,
+            'Image' => [ // REQUIRED
+                'S3Object' => [
+                    'Bucket' => config('filesystems.disks.s3.bucket'),
+                    'Name' => $path,
+                ],
+            ],
+            'MaxFaces' => 5,
+            'QualityFilter' => 'NONE',
         ]);
 
-        $image = fopen($request->file('photo')->getPathName(), 'r');
-        $bytes = fread($image, $request->file('photo')->getSize());
-
-        if($request->input('type') === 'nudity')
-        {
-            $results = $client->detectModerationLabels(['Image' => ['Bytes' => $bytes], 'MinConfidence' => intval($request->input('confidence'))])['ModerationLabels'];
-
-            if(array_search('Explicit Nudity', array_column($results, 'Name')))
-            {
-                $message = 'This photo may contain nudity';
-            }
-            else
-            {
-                $message = 'This photo does not contain nudity';
-            }
-        }
-        else
-        {
-            $results = $client->detectText(['Image' => ['Bytes' => $bytes], 'MinConfidence' => intval($request->input('confidence'))])['TextDetections'];
-
-            $string = '';
-            foreach($results as $item)
-            {
-                if($item['Type'] === 'WORD')
-                {
-                    $string .= $item['DetectedText'] . ' ';
-                }
-            }
-
-            if(empty($string))
-            {
-                $message = 'This photo does not have any words';
-            }
-            else
-            {
-                $message = 'This photo says ' . $string;
-            }
-        }
-
-        request()->session()->flash('success', $message);
-
-        return view('dashboard', ['results' => $results]);
+        return view('dashboard', \compact('result'));
     }
 }

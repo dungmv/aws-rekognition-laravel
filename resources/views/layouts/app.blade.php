@@ -16,11 +16,13 @@
         <!-- Scripts -->
         <script src="{{ asset('js/app.js') }}" defer></script>
     </head>
-    <body class="bg-gray-100">
-        <div class="w-4/5 mx-auto">
-            <div class="px-2 py-4 bg-gray-300 mb-2 rounded">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Laravel + AWS Rekognition SDK Integration</h3>
-                <p class="mt-1 max-w-2xl text-sm text-gray-500">This project demonstrates the integration of the AWS Rekognition SDK into a Laravel project.</p>
+    <body>
+        <div class="container">
+            <div class="p-5 mb-4 bg-light rounded-3">
+                <div class="container-fluid py-5">
+                    <h3 class="h3 fw-bold">Laravel + AWS Rekognition SDK Integration</h3>
+                    <p class="fs-4">This project demonstrates the integration of the AWS Rekognition SDK into a Laravel project.</p>
+                </div>
             </div>
             @yield('content')
         </div>
